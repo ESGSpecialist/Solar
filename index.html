@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Rooftop ROI & Carbon Tax Shield Simulator - คำนวณจุดคุ้มทุนโซลาร์รูฟท็อป</title>
+    
+    <!-- Google Fonts: Kanit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Kanit', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 font-sans selection:bg-amber-500 selection:text-slate-950">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- Header Banner -->
+        <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/70 rounded-3xl p-6 md:p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
+            <div class="absolute -right-8 -top-8 text-amber-500/10 pointer-events-none">
+                <i data-lucide="sun" class="w-64 h-64"></i>
+            </div>
+            <div class="relative z-10 max-w-3xl space-y-2">
+                <span class="text-xs font-bold text-amber-400 tracking-widest uppercase flex items-center gap-1.5">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i> Solar Financial & Carbon Hedge Analytics
+                </span>
+                <h1 class="text-2xl md:text-4xl font-black text-white tracking-tight">
+                    ติด Solar Rooftop วันนี้ อีกกี่ปีคืนทุนเมื่อบวกภาษีคาร์บอน? ☀️💸
+                </h1>
+                <p class="text-xs md:text-sm text-slate-400 leading-relaxed">
+                    จำลองผลตอบแทนทางการเงินที่แท้จริงเมื่อไฟฟ้าสะอาดจากหลังคาบ้านคุณกลายเป็น "เกราะกำบังภาษีคาร์บอน" (Carbon Tax Shield) เปรียบเทียบระยะเวลาคืนทุน กระแสเงินสดสะสม 25 ปี และปริมาณคาร์บอนที่ลดได้จริง
+                </p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Controls: Inputs & Calibration -->
+            <div class="lg:col-span-5 space-y-6">
+                
+                <!-- 1. System Specifications -->
+                <div class="bg-slate-900 rounded-3xl p-6 border border-slate-800 space-y-5 shadow-lg">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="panel-top" class="text-amber-400 w-4 h-4"></i> 1. สเปกและต้นทุนระบบโซลาร์เซลล์
+                        </h2>
+                        <span class="text-[11px] text-slate-500 font-medium">CAPEX & Sizing</span>
+                    </div>
+
+                    <!-- Preset System Sizes -->
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ขนาดติดตั้ง (kWp)</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button onclick="setSystemPreset(3)" id="btn-kw-3" class="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-center hover:border-amber-500/50 transition-all text-xs font-bold">3 kWp</button>
+                            <button onclick="setSystemPreset(5)" id="btn-kw-5" class="p-2.5 bg-slate-900 border border-amber-500/50 rounded-xl text-center text-amber-400 ring-1 ring-amber-500/30 text-xs font-bold">5 kWp</button>
+                            <button onclick="setSystemPreset(10)" id="btn-kw-10" class="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-center hover:border-amber-500/50 transition-all text-xs font-bold">10 kWp</button>
+                            <button onclick="setSystemPreset(15)" id="btn-kw-15" class="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-center hover:border-amber-500/50 transition-all text-xs font-bold">15 kWp</button>
+                        </div>
+                    </div>
+
+                    <!-- Manual Capacity Slider -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-400">ขนาดความจุที่เลือก:</span>
+                            <span id="displayCapacity" class="font-black text-amber-400 text-sm">5.0 kWp</span>
+                        </div>
+                        <input type="range" id="systemCapacity" min="1" max="30" step="0.5" value="5" oninput="onCapacityChange()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500">
+                    </div>
+
+                    <!-- Total Installation Cost (CAPEX) -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-400">ต้นทุนติดตั้งรวม (CAPEX):</span>
+                            <span class="text-[11px] text-slate-500">(เฉลี่ย ~32,000 บ./kWp)</span>
+                        </div>
+                        <div class="relative">
+                            <input type="number" id="systemCost" value="160000" min="20000" step="5000" oninput="calculateAll()" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm font-bold text-slate-200 outline-none focus:border-amber-500 transition-all">
+                            <span class="absolute right-4 top-3 text-xs text-slate-500 font-medium">บาท</span>
+                        </div>
+                    </div>
+
+                    <!-- Daytime Self-Consumption Ratio -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-400">สัดส่วนใช้ไฟเองกลางวัน (Self-Consumption):</span>
+                            <span id="displaySelfUse" class="font-bold text-emerald-400">80%</span>
+                        </div>
+                        <input type="range" id="selfUseRatio" min="30" max="100" step="5" value="80" oninput="calculateAll()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                        <div class="flex justify-between text-[10px] text-slate-500">
+                            <span>30% (อยู่บ้านน้อย)</span>
+                            <span>80% (Work from home)</span>
+                            <span>100% (สำนักงาน/SME)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Tariff & Carbon Tax Policy -->
+                <div class="bg-slate-900 rounded-3xl p-6 border border-slate-800 space-y-5 shadow-lg">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="scale" class="text-emerald-400 w-4 h-4"></i> 2. ค่าไฟและนโยบายภาษีคาร์บอน
+                        </h2>
+                        <span class="text-[11px] text-slate-500 font-medium">Policy Scenarios</span>
+                    </div>
+
+                    <!-- Base Electricity Tariff -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">ค่าไฟปัจจุบัน (บาท/หน่วย)</label>
+                            <input type="number" id="baseTariff" value="4.30" min="2.5" max="8.0" step="0.05" oninput="calculateAll()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 outline-none focus:border-amber-500">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">ค่าไฟขึ้นเฉลี่ย (%/ปี)</label>
+                            <input type="number" id="tariffEscalation" value="2.5" min="0" max="10" step="0.1" oninput="calculateAll()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 outline-none focus:border-amber-500">
+                        </div>
+                    </div>
+
+                    <!-- Carbon Tax Policy Preset -->
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">ฉากทัศน์ภาษีคาร์บอน (Carbon Tax Scenario)</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="setCarbonPreset(0)" id="tax-pre-0" class="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-left hover:border-slate-700 transition-all text-xs">
+                                <span class="font-bold text-slate-300 block">ไม่มีภาษี (0 ฿)</span>
+                                <span class="text-[10px] text-slate-500">Business As Usual</span>
+                            </button>
+                            <button onclick="setCarbonPreset(200)" id="tax-pre-200" class="p-2.5 bg-slate-900 border border-emerald-500/50 rounded-xl text-left text-xs ring-1 ring-emerald-500/30">
+                                <span class="font-bold text-emerald-400 block">พ.ร.บ. โลกร้อนไทย 🇹🇭</span>
+                                <span class="text-[10px] text-slate-400">200 บาท / tCO₂e</span>
+                            </button>
+                            <button onclick="setCarbonPreset(800)" id="tax-pre-800" class="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-left hover:border-slate-700 transition-all text-xs">
+                                <span class="font-bold text-amber-400 block">เกณฑ์สิงคโปร์ 🇸🇬</span>
+                                <span class="text-[10px] text-slate-400">800 บาท / tCO₂e</span>
+                            </button>
+                            <button onclick="setCarbonPreset(2500)" id="tax-pre-2500" class="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-left hover:border-slate-700 transition-all text-xs">
+                                <span class="font-bold text-rose-400 block">เกณฑ์ยุโรป CBAM 🇪🇺</span>
+                                <span class="text-[10px] text-slate-400">2,500 บาท / tCO₂e</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Carbon Tax Manual Slider -->
+                    <div class="space-y-2 pt-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-400">อัตราภาษีคาร์บอนที่ประเมิน:</span>
+                            <span id="displayTaxRate" class="font-black text-emerald-400 text-sm">200 บาท/ตัน</span>
+                        </div>
+                        <input type="range" id="carbonTaxRate" min="0" max="3500" step="50" value="200" oninput="onTaxSliderChange()" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Analytics: Results, Charts & Tables -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Hero Comparison Metrics -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- Payback Box -->
+                    <div class="bg-gradient-to-br from-slate-900 to-slate-900/90 rounded-3xl p-6 border border-slate-800 shadow-xl space-y-3 relative overflow-hidden">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">ระยะเวลาคืนทุน (Payback Period)</span>
+                        
+                        <div class="flex items-baseline gap-2">
+                            <span id="paybackWithTax" class="text-5xl font-black text-emerald-400 tracking-tight">5.6</span>
+                            <span class="text-lg font-bold text-slate-400">ปี</span>
+                        </div>
+
+                        <div class="text-xs text-slate-400 border-t border-slate-800/80 pt-3 space-y-1">
+                            <div class="flex justify-between">
+                                <span>กรณีไม่มีภาษีคาร์บอน:</span>
+                                <span id="paybackNoTax" class="font-semibold text-slate-300">6.2 ปี</span>
+                            </div>
+                            <div class="flex justify-between text-emerald-400 font-bold">
+                                <span>คืนทุนเร็วขึ้นทันที:</span>
+                                <span id="paybackDiff">~7 เดือน (0.6 ปี)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 25-Year Net Profit Box -->
+                    <div class="bg-gradient-to-br from-slate-900 to-slate-900/90 rounded-3xl p-6 border border-slate-800 shadow-xl space-y-3">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">ผลประโยชน์สุทธิสะสม 25 ปี (Net Lifetime Savings)</span>
+                        
+                        <div class="flex items-baseline gap-2">
+                            <span id="lifetimeSavings" class="text-5xl font-black text-amber-400 tracking-tight">728,400</span>
+                            <span class="text-lg font-bold text-slate-400">บาท</span>
+                        </div>
+
+                        <div class="text-xs text-slate-400 border-t border-slate-800/80 pt-3 space-y-1">
+                            <div class="flex justify-between">
+                                <span>มูลค่าภาษีคาร์บอนที่เซฟได้:</span>
+                                <span id="carbonShieldVal" class="font-semibold text-emerald-400">+58,200 บาท</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>ลดคาร์บอนสะสมตลอดชีพ:</span>
+                                <span id="co2Lifetime" class="font-semibold text-teal-300">74.5 ตัน CO₂e</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Cumulative Cash Flow Chart -->
+                <div class="bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-lg space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-1.5">
+                                <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i> กระแสเงินสดสะสม 25 ปี (Cumulative Cash Flow)
+                            </h3>
+                            <span class="text-[11px] text-slate-500">จุดที่เส้นตัดระดับ 0 บาท คือปีที่โครงการเริ่มกำไรสุทธิ</span>
+                        </div>
+                        <div class="flex items-center gap-3 text-[11px]">
+                            <span class="flex items-center gap-1 text-slate-400"><span class="w-2.5 h-2.5 rounded-full bg-slate-500 inline-block"></span> ฐานเดิม (ไม่มีภาษี)</span>
+                            <span class="flex items-center gap-1 text-emerald-400 font-bold"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span> รวมภาษีคาร์บอน</span>
+                        </div>
+                    </div>
+
+                    <div class="h-64 w-full">
+                        <canvas id="cashflowChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Strategic ESG Takeaway Card -->
+                <div class="bg-slate-950/70 rounded-3xl p-6 border border-slate-850 space-y-3">
+                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="lightbulb" class="w-4 h-4 text-amber-400"></i> ESG Specialist Takeaway
+                    </h4>
+                    <p id="advisorTakeaway" class="text-xs text-slate-400 leading-relaxed font-light">
+                        กำลังประมวลผลข้อคิดเห็นเชิงกลยุทธ์...
+                    </p>
+                </div>
+
+                <!-- Detailed Lifecycle Table (Collapsible) -->
+                <details class="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden group">
+                    <summary class="p-5 cursor-pointer text-xs font-bold text-slate-300 flex justify-between items-center hover:bg-slate-850 transition-all">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="table" class="w-4 h-4 text-teal-400"></i> ตารางแจกแจงกระแสเงินสดรายปี (Year-by-Year Financial Ledger)
+                        </span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-500 group-open:rotate-180 transition-transform"></i>
+                    </summary>
+                    <div class="p-5 pt-0 overflow-x-auto">
+                        <table class="w-full text-left text-[11px] text-slate-400">
+                            <thead class="border-b border-slate-800 text-slate-500 uppercase tracking-wider">
+                                <tr>
+                                    <th class="py-2.5">ปีที่</th>
+                                    <th class="py-2.5">ผลิตไฟ (kWh)</th>
+                                    <th class="py-2.5">เซฟค่าไฟฐาน (฿)</th>
+                                    <th class="py-2.5">เซฟภาษีคาร์บอน (฿)</th>
+                                    <th class="py-2.5">OPEX/ซ่อมบำรุง (฿)</th>
+                                    <th class="py-2.5 text-right">เงินสดสะสมสุทธิ (฿)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ledgerTableBody" class="divide-y divide-slate-800/40">
+                                <!-- Generated Dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+
+            </div>
+        </div>
+
+        <!-- Footer Notice -->
+        <div class="text-center text-xs text-slate-600 flex items-center justify-center gap-1 pt-2">
+            <i data-lucide="info" class="w-3.5 h-3.5"></i>
+            แบบจำลองอ้างอิงค่าแดดเฉลี่ยไทย 4.0 PSH/วัน, ค่าสัมประสิทธิ์การปล่อยก๊าซเรือนกระจก 0.475 kg CO₂e/kWh (TGO)
+        </div>
+
+    </div>
+
+    <!-- Application Engine Logic -->
+    <script>
+        lucide.createIcons();
+
+        let chartInstance = null;
+        const PSH = 4.0; // Peak Sun Hours per day in Thailand
+        const SYSTEM_PR = 0.78; // Performance Ratio (losses: heat, dust, wiring)
+        const GRID_EF = 0.475; // kg CO2e / kWh (Thailand Grid Emission Factor)
+        const FEED_IN_TARIFF = 2.20; // บาท/หน่วย (โครงการโซลาร์ภาคประชาชน)
+
+        function setSystemPreset(kw) {
+            document.getElementById('systemCapacity').value = kw;
+            // Scale CAPEX roughly: ~33k/kW for small, down to ~27k/kW for larger
+            let costPerKw = kw <= 3 ? 34000 : kw <= 5 ? 32000 : kw <= 10 ? 29000 : 27000;
+            document.getElementById('systemCost').value = Math.round(kw * costPerKw);
+            
+            // Highlight button
+            [3, 5, 10, 15].forEach(v => {
+                const btn = document.getElementById('btn-kw-' + v);
+                if (v === kw) {
+                    btn.className = "p-2.5 bg-slate-900 border border-amber-500/50 rounded-xl text-center text-amber-400 ring-1 ring-amber-500/30 text-xs font-bold";
+                } else {
+                    btn.className = "p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-center hover:border-amber-500/50 transition-all text-xs font-bold";
+                }
+            });
+
+            onCapacityChange();
+        }
+
+        function onCapacityChange() {
+            const kw = parseFloat(document.getElementById('systemCapacity').value);
+            document.getElementById('displayCapacity').innerText = kw.toFixed(1) + " kWp";
+            calculateAll();
+        }
+
+        function setCarbonPreset(rate) {
+            document.getElementById('carbonTaxRate').value = rate;
+            
+            [0, 200, 800, 2500].forEach(r => {
+                const btn = document.getElementById('tax-pre-' + r);
+                if (r === rate) {
+                    btn.className = "p-2.5 bg-slate-900 border border-emerald-500/50 rounded-xl text-left text-xs ring-1 ring-emerald-500/30";
+                } else {
+                    btn.className = "p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-left hover:border-slate-700 transition-all text-xs";
+                }
+            });
+
+            onTaxSliderChange();
+        }
+
+        function onTaxSliderChange() {
+            const rate = parseFloat(document.getElementById('carbonTaxRate').value);
+            document.getElementById('displayTaxRate').innerText = rate.toLocaleString() + " บาท/ตัน";
+            calculateAll();
+        }
+
+        function calculateAll() {
+            const capacity = parseFloat(document.getElementById('systemCapacity').value);
+            const capex = parseFloat(document.getElementById('systemCost').value);
+            const selfUseRatio = parseFloat(document.getElementById('selfUseRatio').value) / 100;
+            document.getElementById('displaySelfUse').innerText = (selfUseRatio * 100).toFixed(0) + "%";
+
+            const baseTariff = parseFloat(document.getElementById('baseTariff').value);
+            const tariffEsc = parseFloat(document.getElementById('tariffEscalation').value) / 100;
+            const carbonTaxRate = parseFloat(document.getElementById('carbonTaxRate').value);
+
+            // Avoided Carbon Tax per kWh avoided from grid
+            // Carbon Tax Rate (THB/tonne) / 1000 * 0.475 kg/kWh
+            const carbonTaxPerKwh = (carbonTaxRate / 1000) * GRID_EF;
+
+            // First year annual generation (kWh)
+            const annualGenYear1 = capacity * PSH * 365 * SYSTEM_PR;
+
+            // Arrays for 25-Year Projection
+            let years = [0];
+            let cumulativeNoTax = [-capex];
+            let cumulativeWithTax = [-capex];
+            
+            let totalCarbonAvoidedTonnes = 0;
+            let totalCarbonShieldBenefit = 0;
+            let ledgerRows = [];
+
+            let runningNoTax = -capex;
+            let runningWithTax = -capex;
+
+            const degradationRate = 0.005; // 0.5% per year
+            const annualOpexRate = 0.01; // 1% of CAPEX
+
+            for (let t = 1; t <= 25; t++) {
+                years.push(t);
+
+                // Solar generation degradation
+                const gen = annualGenYear1 * Math.pow(1 - degradationRate, t - 1);
+                const selfUsedUnits = gen * selfUseRatio;
+                const surplusUnits = gen * (1 - selfUseRatio);
+
+                // Grid tariff with annual inflation
+                const currentTariff = baseTariff * Math.pow(1 + tariffEsc, t - 1);
+                
+                // Financial Savings:
+                // Base electricity bill saving + surplus sale
+                const baseSaving = (selfUsedUnits * currentTariff) + (surplusUnits * FEED_IN_TARIFF);
+                
+                // Carbon Tax Shield Saving: (Carbon tax avoided by not taking power from grid)
+                // Note: Only self-used green units directly eliminate personal carbon tax pass-through
+                const carbonTaxSaving = selfUsedUnits * carbonTaxPerKwh;
+                totalCarbonShieldBenefit += carbonTaxSaving;
+
+                // Annual CO2 avoided (tonnes)
+                const co2Tonnes = (gen * GRID_EF) / 1000;
+                totalCarbonAvoidedTonnes += co2Tonnes;
+
+                // OPEX and Inverter Replacement at Year 12
+                let opex = capex * annualOpexRate;
+                if (t === 12) {
+                    opex += (capex * 0.15); // Inverter overhaul
+                }
+
+                const netAnnualNoTax = baseSaving - opex;
+                const netAnnualWithTax = baseSaving + carbonTaxSaving - opex;
+
+                runningNoTax += netAnnualNoTax;
+                runningWithTax += netAnnualWithTax;
+
+                cumulativeNoTax.push(Math.round(runningNoTax));
+                cumulativeWithTax.push(Math.round(runningWithTax));
+
+                // Append to ledger sample years (1, 2, 3, 5, 10, 15, 20, 25)
+                if ([1, 2, 3, 5, 10, 12, 15, 20, 25].includes(t)) {
+                    ledgerRows.push(`
+                        <tr class="hover:bg-slate-850/50">
+                            <td class="py-2.5 font-bold text-slate-300">ปีที่ ${t} ${t === 12 ? '<span class="text-[9px] text-amber-400 font-normal">(เปลี่ยน Inverter)</span>' : ''}</td>
+                            <td class="py-2.5">${Math.round(gen).toLocaleString()}</td>
+                            <td class="py-2.5 text-emerald-400">+${Math.round(baseSaving).toLocaleString()}</td>
+                            <td class="py-2.5 text-teal-300">+${Math.round(carbonTaxSaving).toLocaleString()}</td>
+                            <td class="py-2.5 text-rose-400">-${Math.round(opex).toLocaleString()}</td>
+                            <td class="py-2.5 text-right font-bold ${runningWithTax >= 0 ? 'text-emerald-400' : 'text-slate-400'}">${Math.round(runningWithTax).toLocaleString()}</td>
+                        </tr>
+                    `);
+                }
+            }
+
+            // Calculate Exact Payback Periods by linear interpolation
+            const paybackNoTax = calculateExactPayback(cumulativeNoTax);
+            const paybackWithTax = calculateExactPayback(cumulativeWithTax);
+            const diffMonths = Math.max(0, Math.round((paybackNoTax - paybackWithTax) * 12));
+
+            // Update UI Displays
+            document.getElementById('paybackWithTax').innerText = paybackWithTax.toFixed(1);
+            document.getElementById('paybackNoTax').innerText = paybackNoTax.toFixed(1) + " ปี";
+            document.getElementById('paybackDiff').innerText = `~${diffMonths} เดือน (${(paybackNoTax - paybackWithTax).toFixed(1)} ปี)`;
+
+            document.getElementById('lifetimeSavings').innerText = Math.round(runningWithTax).toLocaleString();
+            document.getElementById('carbonShieldVal').innerText = `+${Math.round(totalCarbonShieldBenefit).toLocaleString()} บาท`;
+            document.getElementById('co2Lifetime').innerText = totalCarbonAvoidedTonnes.toFixed(1) + " ตัน CO₂e";
+
+            document.getElementById('ledgerTableBody').innerHTML = ledgerRows.join('');
+
+            // Strategic Insights
+            updateTakeaway(capacity, paybackWithTax, paybackNoTax, carbonTaxRate, totalCarbonAvoidedTonnes);
+
+            // Render/Update Chart
+            renderChart(years, cumulativeNoTax, cumulativeWithTax);
+        }
+
+        function calculateExactPayback(cumulativeArr) {
+            for (let i = 1; i < cumulativeArr.length; i++) {
+                if (cumulativeArr[i] >= 0) {
+                    const prev = cumulativeArr[i - 1];
+                    const curr = cumulativeArr[i];
+                    const fraction = Math.abs(prev) / (curr - prev);
+                    return (i - 1) + fraction;
+                }
+            }
+            return 25.0;
+        }
+
+        function updateTakeaway(capacity, pTax, pNoTax, taxRate, co2) {
+            const el = document.getElementById('advisorTakeaway');
+            if (taxRate === 0) {
+                el.innerHTML = `ในฉากทัศน์ปัจจุบันที่ยังไม่มีการจัดเก็บภาษีคาร์บอน ระบบโซลาร์ขนาด ${capacity} kWp นี้สามารถคืนทุนได้ในเวลาประมาณ <strong>${pNoTax.toFixed(1)} ปี</strong> ซึ่งประหยัดค่าไฟฐานได้คุ้มค่าตามรอบปกติของค่าไฟไทย`;
+            } else if (taxRate <= 200) {
+                el.innerHTML = `ภายใต้ <strong>ร่าง พ.ร.บ. โลกร้อนของไทย (200 บ./ตัน)</strong> ภาษีคาร์บอนจะแฝงเข้ามาในค่า Ft เล็กน้อย (+0.095 บ./หน่วย) ช่วยดึงระยะเวลาคืนทุนให้เร็วขึ้นประมาณ <strong>${Math.round((pNoTax - pTax) * 12)} เดือน</strong> พร้อมลดการปล่อยก๊าซเรือนกระจกได้กว่า <strong>${co2.toFixed(0)} ตัน CO₂e</strong> ตลอด 25 ปี`;
+            } else if (taxRate <= 1000) {
+                el.innerHTML = `หากประเทศไทยขยับอัตราภาษีคาร์บอนตาม <strong>เกณฑ์สิงคโปร์ (800 บ./ตัน)</strong> ค่าไฟจากฟอสซิลจะแพงขึ้นทันทีเกือบ 40 สตางค์/หน่วย ส่งผลให้จุดคุ้มทุนลดลงเหลือเพียง <strong>${pTax.toFixed(1)} ปี</strong> ทำให้หลังคาบ้านคุณกลายเป็นการลงทุนที่ให้ผลตอบแทนชนะเงินเฟ้อและลดความผันผวนของค่าไฟได้อย่างมีนัยสำคัญ`;
+            } else {
+                el.innerHTML = `ในฉากทัศน์ <strong>เกณฑ์ยุโรป/CBAM (2,500 บ./ตัน)</strong> ค่าไฟฟอสซิลจะแบกรับภาษีคาร์บอนเกิน 1 บาท/หน่วย จุดคุ้มทุนจะลดฮวบลงมาเร็วมาก ทำให้การติด Solar Rooftop เปลี่ยนสถานะจาก "ทางเลือกเพื่อสิ่งแวดล้อม" กลายเป็น <strong>"มาตรการภาคบังคับทางการเงิน"</strong> เพื่อป้องกันผลกำไรของบ้านและธุรกิจ`;
+            }
+        }
+
+        function renderChart(labels, dataNoTax, dataWithTax) {
+            const ctx = document.getElementById('cashflowChart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.map(y => 'ปี ' + y),
+                    datasets: [
+                        {
+                            label: 'กระแสเงินสดสะสม (รวมภาษีคาร์บอน)',
+                            data: dataWithTax,
+                            borderColor: '#34d399',
+                            backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.25,
+                            pointRadius: 2
+                        },
+                        {
+                            label: 'กระแสเงินสดสะสม (ไม่มีภาษีคาร์บอน)',
+                            data: dataNoTax,
+                            borderColor: '#64748b',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.25,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + ' บาท';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                            ticks: { color: '#64748b', font: { family: 'Kanit', size: 10 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                            ticks: {
+                                color: '#64748b',
+                                font: { family: 'Kanit', size: 10 },
+                                callback: function(val) {
+                                    return (val / 1000).toFixed(0) + 'k';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        window.onload = function() {
+            setSystemPreset(5); // Default 5 kWp
+        };
+    </script>
+</body>
+</html>
